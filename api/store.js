@@ -1,3 +1,5 @@
+export const config = { api: { bodyParser: false } };
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -15,12 +17,19 @@ export default async function handler(req, res) {
       body,
     });
 
-    if (!walrusRes.ok) throw new Error(`Walrus error: ${walrusRes.status}`);
-    const data = await walrusRes.json();
-    const blobId = data?.newlyCreated?.blobObject?.blobId || data?.alreadyCertified?.blobId || data?.blobId;
-    if (!blobId) throw new Error('No blob ID');
+    if (!walrusRes.ok) {
+      const text = await walrusRes.text();
+      throw new Error(`Walrus ${walrusRes.status}: ${text}`);
+    }
 
+    const data = await walrusRes.json();
+    const blobId = data?.newlyCreated?.blobObject?.blobId
+      || data?.alreadyCertified?.blobId
+      || data?.blobId;
+
+    if (!blobId) throw new Error('No blob ID returned from Walrus');
     res.status(200).json({ blobId });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
